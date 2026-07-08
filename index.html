@@ -1,0 +1,1094 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AES-128 Cipher Visualizer</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Inter:wght@300;400;500;600;700&display=swap');
+
+  :root {
+    --bg: #0a0e1a;
+    --bg2: #0f1528;
+    --surface: #141c35;
+    --surface2: #1a2444;
+    --border: #1e2d52;
+    --border2: #243360;
+    --accent: #4f8ef7;
+    --accent2: #7b5fe8;
+    --cyan: #00d4d4;
+    --green: #00e5a0;
+    --orange: #ff8c42;
+    --pink: #f76fd8;
+    --yellow: #ffd166;
+    --red: #ff4d6d;
+    --text: #e8eaf6;
+    --text2: #8892b0;
+    --text3: #4a5578;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Inter', sans-serif;
+
+    /* Op colors */
+    --op-sub: #7b5fe8;
+    --op-shift: #00d4d4;
+    --op-mix: #ff8c42;
+    --op-ark: #4f8ef7;
+    --op-init: #00e5a0;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Animated background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(79,142,247,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(79,142,247,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container { max-width: 1400px; margin: 0 auto; padding: 0 20px; position: relative; z-index: 1; }
+
+  /* HEADER */
+  header {
+    padding: 32px 0 24px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 32px;
+  }
+
+  .header-inner { display: flex; align-items: center; gap: 20px; }
+
+  .logo-badge {
+    width: 52px; height: 52px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; flex-shrink: 0;
+    box-shadow: 0 0 30px rgba(79,142,247,0.3);
+  }
+
+  .header-text h1 {
+    font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em;
+    background: linear-gradient(135deg, #fff 0%, var(--accent) 60%, var(--accent2) 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+
+  .header-text p {
+    font-size: 0.8rem; color: var(--text2); margin-top: 2px; font-family: var(--mono);
+  }
+
+  .badge-row { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+
+  .badge {
+    font-size: 0.7rem; font-family: var(--mono);
+    padding: 3px 10px; border-radius: 20px; border: 1px solid;
+  }
+  .badge-blue { border-color: var(--accent); color: var(--accent); background: rgba(79,142,247,0.1); }
+  .badge-purple { border-color: var(--accent2); color: var(--accent2); background: rgba(123,95,232,0.1); }
+  .badge-cyan { border-color: var(--cyan); color: var(--cyan); background: rgba(0,212,212,0.1); }
+
+  /* LAYOUT */
+  .main-layout { display: grid; grid-template-columns: 380px 1fr; gap: 24px; align-items: start; }
+
+  @media (max-width: 900px) { .main-layout { grid-template-columns: 1fr; } }
+
+  /* CARD */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+
+  .card-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+    background: var(--surface2);
+  }
+
+  .card-header-icon {
+    width: 28px; height: 28px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+  }
+
+  .card-header h2 { font-size: 0.85rem; font-weight: 600; color: var(--text); }
+
+  .card-body { padding: 20px; }
+
+  /* INPUT FORM */
+  .form-group { margin-bottom: 16px; }
+
+  label {
+    display: block; font-size: 0.72rem; font-weight: 600;
+    color: var(--text2); text-transform: uppercase; letter-spacing: 0.08em;
+    margin-bottom: 6px; font-family: var(--mono);
+  }
+
+  .input-wrapper { position: relative; }
+
+  input[type=text], textarea {
+    width: 100%;
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-radius: 10px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 0.82rem;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  input[type=text]:focus, textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(79,142,247,0.15);
+  }
+
+  input[type=text].error { border-color: var(--red); box-shadow: 0 0 0 3px rgba(255,77,109,0.15); }
+
+  .input-hint {
+    font-size: 0.68rem; color: var(--text3); margin-top: 4px;
+    font-family: var(--mono);
+  }
+
+  .input-count {
+    position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+    font-size: 0.65rem; color: var(--text3); font-family: var(--mono);
+    pointer-events: none;
+  }
+
+  /* MODE TOGGLE */
+  .mode-toggle {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 6px; margin-bottom: 16px;
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-radius: 10px; padding: 4px;
+  }
+
+  .mode-btn {
+    padding: 8px 12px; border-radius: 8px; border: none;
+    cursor: pointer; font-family: var(--sans);
+    font-size: 0.82rem; font-weight: 600;
+    transition: all 0.2s; color: var(--text2);
+    background: transparent;
+  }
+
+  .mode-btn.active {
+    color: #fff;
+  }
+  .mode-btn.active.encrypt { background: linear-gradient(135deg, var(--accent), var(--accent2)); box-shadow: 0 2px 12px rgba(79,142,247,0.4); }
+  .mode-btn.active.decrypt { background: linear-gradient(135deg, var(--orange), var(--pink)); box-shadow: 0 2px 12px rgba(255,140,66,0.4); }
+
+  /* BUTTONS */
+  .btn-row { display: flex; gap: 10px; margin-top: 8px; }
+
+  .btn {
+    flex: 1; padding: 12px;
+    border-radius: 10px; border: none; cursor: pointer;
+    font-family: var(--sans); font-size: 0.88rem; font-weight: 700;
+    letter-spacing: 0.05em; text-transform: uppercase;
+    transition: all 0.2s; position: relative; overflow: hidden;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff;
+    box-shadow: 0 4px 20px rgba(79,142,247,0.35);
+  }
+
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 28px rgba(79,142,247,0.5); }
+  .btn-primary:active { transform: translateY(0); }
+
+  .btn-primary.decrypt-mode {
+    background: linear-gradient(135deg, var(--orange), var(--pink));
+    box-shadow: 0 4px 20px rgba(255,140,66,0.35);
+  }
+
+  .btn-reset {
+    flex: 0 0 auto; padding: 12px 16px;
+    background: var(--bg2); border: 1px solid var(--border2);
+    color: var(--text2); border-radius: 10px; cursor: pointer;
+    font-size: 0.82rem; font-weight: 600;
+    transition: all 0.2s; font-family: var(--sans);
+  }
+  .btn-reset:hover { border-color: var(--text3); color: var(--text); }
+
+  /* OUTPUT */
+  .output-box {
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-radius: 10px;
+    padding: 14px;
+    margin-top: 16px;
+    display: none;
+  }
+
+  .output-box.visible { display: block; }
+
+  .output-label {
+    font-size: 0.68rem; font-family: var(--mono);
+    color: var(--text3); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px;
+  }
+
+  .output-value {
+    font-family: var(--mono); font-size: 0.85rem;
+    color: var(--green); word-break: break-all;
+    display: flex; align-items: flex-start; gap: 8px;
+  }
+
+  .output-value span { flex: 1; }
+
+  .copy-btn {
+    flex-shrink: 0; background: none; border: 1px solid var(--border2);
+    color: var(--text3); border-radius: 6px; padding: 4px 8px;
+    cursor: pointer; font-size: 0.7rem; font-family: var(--mono);
+    transition: all 0.15s;
+  }
+  .copy-btn:hover { border-color: var(--green); color: var(--green); }
+  .copy-btn.copied { border-color: var(--green); color: var(--green); }
+
+  /* ERROR */
+  .error-msg {
+    background: rgba(255,77,109,0.1); border: 1px solid rgba(255,77,109,0.3);
+    color: var(--red); border-radius: 8px; padding: 10px 14px;
+    font-size: 0.8rem; font-family: var(--mono); margin-top: 12px; display: none;
+  }
+  .error-msg.visible { display: block; }
+
+  /* LOADING */
+  .loading {
+    display: none; align-items: center; gap: 10px;
+    padding: 16px; color: var(--text2); font-size: 0.82rem;
+  }
+  .loading.visible { display: flex; }
+
+  .spinner {
+    width: 18px; height: 18px; border-radius: 50%;
+    border: 2px solid var(--border2);
+    border-top-color: var(--accent);
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ===== RIGHT PANEL ===== */
+  .right-panel { display: flex; flex-direction: column; gap: 20px; }
+
+  /* NAV */
+  .step-nav {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+    display: none;
+  }
+
+  .step-nav.visible { display: block; }
+  .step-nav-title { font-size: 0.72rem; font-family: var(--mono); color: var(--text3); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 10px; }
+
+  .nav-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+
+  .nav-pill {
+    padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border2);
+    font-size: 0.72rem; font-family: var(--mono);
+    cursor: pointer; color: var(--text2);
+    transition: all 0.15s; background: var(--bg2);
+  }
+
+  .nav-pill:hover { border-color: var(--accent); color: var(--accent); }
+  .nav-pill.active { border-color: var(--accent); background: rgba(79,142,247,0.15); color: var(--accent); }
+  .nav-pill.key-pill { border-color: var(--yellow); color: var(--yellow); }
+  .nav-pill.key-pill.active { background: rgba(255,209,102,0.1); }
+
+  /* DETAIL PANEL */
+  .detail-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    display: none;
+  }
+
+  .detail-panel.visible { display: block; }
+
+  /* KEY EXPANSION */
+  .key-exp-section { padding: 20px; }
+
+  /* ROUND SECTIONS */
+  .round-section {
+    border-bottom: 1px solid var(--border);
+  }
+
+  .round-header {
+    padding: 14px 20px;
+    display: flex; align-items: center; justify-content: space-between;
+    cursor: pointer; user-select: none;
+    background: var(--surface2);
+    transition: background 0.15s;
+  }
+
+  .round-header:hover { background: var(--bg2); }
+
+  .round-header-left { display: flex; align-items: center; gap: 12px; }
+
+  .round-number {
+    width: 32px; height: 32px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.75rem; font-weight: 700; font-family: var(--mono);
+    flex-shrink: 0;
+  }
+
+  .round-num-init { background: rgba(0,229,160,0.15); color: var(--green); border: 1px solid rgba(0,229,160,0.3); }
+  .round-num-main { background: rgba(79,142,247,0.15); color: var(--accent); border: 1px solid rgba(79,142,247,0.3); }
+  .round-num-final { background: rgba(247,111,216,0.15); color: var(--pink); border: 1px solid rgba(247,111,216,0.3); }
+
+  .round-label { font-size: 0.85rem; font-weight: 600; }
+  .round-ops-summary { font-size: 0.7rem; color: var(--text3); font-family: var(--mono); margin-top: 2px; }
+  .round-chevron { color: var(--text3); transition: transform 0.2s; font-size: 0.75rem; }
+  .round-header.open .round-chevron { transform: rotate(180deg); }
+
+  .round-content { display: none; padding: 0 20px 20px; }
+  .round-content.open { display: block; }
+
+  /* OPERATION */
+  .operation-block { margin-top: 16px; }
+
+  .op-label-bar {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+  }
+
+  .op-dot {
+    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  }
+
+  .op-name {
+    font-size: 0.78rem; font-weight: 700; font-family: var(--mono);
+    text-transform: uppercase; letter-spacing: 0.06em;
+  }
+
+  .states-display {
+    display: flex; align-items: flex-start; gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .state-block { flex-shrink: 0; }
+
+  .state-tag {
+    font-size: 0.62rem; font-family: var(--mono); color: var(--text3);
+    text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 5px;
+  }
+
+  /* STATE MATRIX TABLE */
+  .state-matrix {
+    border-collapse: collapse;
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    overflow: hidden;
+    font-family: var(--mono);
+    font-size: 0.75rem;
+  }
+
+  .state-matrix td {
+    width: 40px; height: 36px;
+    text-align: center; vertical-align: middle;
+    border: 1px solid rgba(255,255,255,0.05);
+    font-weight: 500;
+    transition: background 0.3s;
+  }
+
+  /* Cell coloring by operation type */
+  .cell-sub { background: rgba(123,95,232,0.15); color: #c4b5fd; }
+  .cell-shift { background: rgba(0,212,212,0.12); color: #67e8e8; }
+  .cell-mix { background: rgba(255,140,66,0.15); color: #fbb978; }
+  .cell-ark { background: rgba(79,142,247,0.15); color: #93c0fa; }
+  .cell-init { background: rgba(0,229,160,0.12); color: #6eefca; }
+  .cell-key { background: rgba(255,209,102,0.12); color: #fcd34d; }
+  .cell-plain { background: rgba(30,45,82,0.8); color: var(--text); }
+  .cell-changed { outline: 1px solid rgba(255,255,255,0.4); }
+
+  .arrow-sep {
+    color: var(--text3); font-size: 1rem;
+    padding-top: 28px; flex-shrink: 0;
+  }
+
+  /* KEY EXPANSION TABLE */
+  .word-table {
+    width: 100%; border-collapse: collapse;
+    font-family: var(--mono); font-size: 0.75rem;
+    margin-top: 10px;
+  }
+
+  .word-table th {
+    text-align: left; padding: 6px 10px;
+    background: var(--surface2); color: var(--text2);
+    font-size: 0.68rem; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.06em;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .word-table td {
+    padding: 6px 10px; border-bottom: 1px solid rgba(255,255,255,0.04);
+    vertical-align: top; color: var(--text);
+  }
+
+  .word-table tr:last-child td { border-bottom: none; }
+  .word-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+  .word-hex { color: var(--yellow); }
+  .word-g { color: var(--pink); }
+  .word-note { color: var(--text3); font-size: 0.68rem; }
+
+  /* G-FUNCTION DETAIL */
+  .g-func-detail {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px; margin: 6px 0;
+    font-family: var(--mono); font-size: 0.72rem;
+  }
+
+  .g-step { display: flex; gap: 12px; margin-bottom: 4px; align-items: center; }
+  .g-step-label { color: var(--text3); width: 100px; flex-shrink: 0; }
+  .g-step-val { color: var(--cyan); }
+  .g-step-rcon { color: var(--orange); }
+
+  /* ROUND KEY GRID */
+  .rk-grid { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
+  .rk-item { }
+  .rk-item-label { font-size: 0.68rem; font-family: var(--mono); color: var(--yellow); margin-bottom: 4px; }
+
+  /* TOGGLE */
+  .toggle-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 20px;
+    background: var(--surface2);
+    border-top: 1px solid var(--border);
+  }
+
+  .toggle-label { font-size: 0.78rem; color: var(--text2); }
+
+  .toggle-switch { position: relative; width: 44px; height: 24px; cursor: pointer; }
+  .toggle-switch input { opacity: 0; width: 0; height: 0; }
+
+  .toggle-track {
+    position: absolute; inset: 0;
+    background: var(--border2); border-radius: 12px;
+    transition: background 0.2s;
+  }
+
+  .toggle-thumb {
+    position: absolute; top: 3px; left: 3px;
+    width: 18px; height: 18px; border-radius: 50%;
+    background: var(--text2); transition: all 0.2s;
+  }
+
+  .toggle-switch input:checked ~ .toggle-track { background: var(--accent); }
+  .toggle-switch input:checked ~ .toggle-thumb { transform: translateX(20px); background: #fff; }
+
+  /* EMPTY STATE */
+  .empty-state {
+    padding: 60px 20px; text-align: center;
+    color: var(--text3);
+  }
+
+  .empty-icon { font-size: 3rem; margin-bottom: 16px; opacity: 0.3; }
+  .empty-title { font-size: 1rem; font-weight: 600; color: var(--text2); margin-bottom: 6px; }
+  .empty-sub { font-size: 0.8rem; color: var(--text3); }
+
+  /* SUMMARY STATS */
+  .summary-bar {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 10px; margin-bottom: 16px;
+  }
+
+  .stat-box {
+    background: var(--bg2); border: 1px solid var(--border2);
+    border-radius: 10px; padding: 12px;
+    text-align: center;
+  }
+
+  .stat-val { font-family: var(--mono); font-size: 1.2rem; font-weight: 700; color: var(--accent); }
+  .stat-label { font-size: 0.65rem; color: var(--text3); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.06em; }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg2); }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+
+  /* TOAST */
+  .toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: var(--surface2); border: 1px solid var(--green);
+    color: var(--green); border-radius: 10px;
+    padding: 10px 18px; font-size: 0.8rem; font-family: var(--mono);
+    transform: translateY(80px); opacity: 0;
+    transition: all 0.3s; z-index: 999;
+  }
+
+  .toast.show { transform: translateY(0); opacity: 1; }
+
+  /* SECTION DIVIDER */
+  .section-divider {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 20px; 
+    background: rgba(255,209,102,0.05);
+    border-bottom: 1px solid rgba(255,209,102,0.1);
+  }
+
+  .divider-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--yellow); }
+  .divider-label { font-size: 0.7rem; font-family: var(--mono); color: var(--yellow); font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; }
+
+  /* Highlight */
+  @keyframes cellPulse {
+    0% { box-shadow: inset 0 0 0 1px rgba(255,255,255,0.5); }
+    100% { box-shadow: none; }
+  }
+
+  .cell-new { animation: cellPulse 0.8s ease-out; }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    .summary-bar { grid-template-columns: repeat(3, 1fr); }
+    .state-matrix td { width: 32px; height: 30px; font-size: 0.68rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <div class="header-inner">
+      <div class="logo-badge">🔐</div>
+      <div class="header-text">
+        <h1>AES-128 Cipher Visualizer</h1>
+        <p>Advanced Encryption Standard · Step-by-Step Decomposition</p>
+        <div class="badge-row">
+          <span class="badge badge-blue">128-bit Block</span>
+          <span class="badge badge-purple">10 Rounds</span>
+          <span class="badge badge-cyan">ECB Mode</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="main-layout">
+    <!-- LEFT: INPUT PANEL -->
+    <div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-header-icon" style="background:rgba(79,142,247,0.15)">⚙️</div>
+          <h2>Parameter Input</h2>
+        </div>
+        <div class="card-body">
+
+          <!-- Mode Toggle -->
+          <div class="form-group">
+            <label>Mode Operasi</label>
+            <div class="mode-toggle">
+              <button class="mode-btn active encrypt" onclick="setMode('encrypt')">🔒 Enkripsi</button>
+              <button class="mode-btn decrypt" onclick="setMode('decrypt')">🔓 Dekripsi</button>
+            </div>
+          </div>
+
+          <!-- Input -->
+          <div class="form-group">
+            <label id="inputLabel">Plaintext</label>
+            <div class="input-wrapper">
+              <input type="text" id="inputText" placeholder="Teks (maks. 16 char) atau 32 hex" maxlength="32">
+              <span class="input-count" id="inputCount">0</span>
+            </div>
+            <div class="input-hint" id="inputHint">Contoh teks: <code>HelloWorld123456</code> atau hex: <code>48656c6c6f576f726c6431323334353600</code></div>
+          </div>
+
+          <!-- Key -->
+          <div class="form-group">
+            <label>Kunci AES-128 (32 hex)</label>
+            <div class="input-wrapper">
+              <input type="text" id="keyInput" placeholder="32 karakter hex (128-bit)" maxlength="32">
+              <span class="input-count" id="keyCount">0</span>
+            </div>
+            <div class="input-hint">Contoh: <code>2b7e151628aed2a6abf7158809cf4f3c</code></div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="btn-row">
+            <button class="btn btn-primary" id="processBtn" onclick="processAES()">🔒 ENCRYPT</button>
+            <button class="btn-reset" onclick="resetAll()">↺ Reset</button>
+          </div>
+
+          <!-- Error -->
+          <div class="error-msg" id="errorMsg"></div>
+
+          <!-- Loading -->
+          <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <span>Memproses AES-128...</span>
+          </div>
+
+          <!-- Output -->
+          <div class="output-box" id="outputBox">
+            <div class="output-label" id="outputLabel">Ciphertext (HEX)</div>
+            <div class="output-value">
+              <span id="outputHex">—</span>
+              <button class="copy-btn" onclick="copyOutput()" id="copyBtn">copy</button>
+            </div>
+          </div>
+
+          <!-- Text output for decrypt -->
+          <div class="output-box" id="outputTextBox">
+            <div class="output-label">Plaintext (ASCII)</div>
+            <div class="output-value">
+              <span id="outputText">—</span>
+              <button class="copy-btn" onclick="copyText()">copy</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Detail Toggle -->
+        <div class="toggle-bar">
+          <span class="toggle-label">Tampilkan Detail Proses</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="showDetail" checked onchange="toggleDetail()">
+            <div class="toggle-track"></div>
+            <div class="toggle-thumb"></div>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: DETAIL PANEL -->
+    <div class="right-panel">
+
+      <!-- Step Navigation -->
+      <div class="step-nav" id="stepNav">
+        <div class="step-nav-title">Navigasi Ronde</div>
+        <div class="nav-pills" id="navPills"></div>
+      </div>
+
+      <!-- Detail content -->
+      <div class="detail-panel" id="detailPanel">
+        <div class="empty-state" id="emptyState">
+          <div class="empty-icon">🔑</div>
+          <div class="empty-title">Belum ada proses</div>
+          <div class="empty-sub">Masukkan plaintext dan kunci, lalu tekan ENCRYPT/DECRYPT</div>
+        </div>
+        <div id="detailContent" style="display:none"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">✓ Disalin ke clipboard</div>
+
+<script>
+let currentMode = 'encrypt';
+let currentResult = null;
+let showDetailFlag = true;
+
+// ===== INIT =====
+document.getElementById('inputText').addEventListener('input', e => {
+  document.getElementById('inputCount').textContent = e.target.value.length;
+});
+document.getElementById('keyInput').addEventListener('input', e => {
+  document.getElementById('keyCount').textContent = e.target.value.length;
+});
+
+function setMode(mode) {
+  currentMode = mode;
+  const btns = document.querySelectorAll('.mode-btn');
+  btns.forEach(b => b.classList.remove('active'));
+  document.querySelector(`.mode-btn.${mode}`).classList.add('active');
+
+  const processBtn = document.getElementById('processBtn');
+  const inputLabel = document.getElementById('inputLabel');
+  const inputHint = document.getElementById('inputHint');
+  const inp = document.getElementById('inputText');
+
+  if (mode === 'encrypt') {
+    processBtn.textContent = '🔒 ENCRYPT';
+    processBtn.className = 'btn btn-primary';
+    inputLabel.textContent = 'Plaintext';
+    inp.placeholder = 'Teks (maks. 16 char) atau 32 hex';
+    inputHint.innerHTML = 'Teks: <code>HelloWorld123456</code> atau hex 32 karakter';
+  } else {
+    processBtn.textContent = '🔓 DECRYPT';
+    processBtn.className = 'btn btn-primary decrypt-mode';
+    inputLabel.textContent = 'Ciphertext (Hex)';
+    inp.placeholder = '32 karakter hex ciphertext';
+    inputHint.innerHTML = 'Masukkan 32 karakter hex hasil enkripsi';
+  }
+
+  resetOutput();
+}
+
+function toggleDetail() {
+  showDetailFlag = document.getElementById('showDetail').checked;
+  const dp = document.getElementById('detailPanel');
+  const sn = document.getElementById('stepNav');
+  dp.style.display = showDetailFlag ? 'block' : 'none';
+  sn.style.display = showDetailFlag ? 'block' : 'none';
+}
+
+function resetOutput() {
+  document.getElementById('outputBox').classList.remove('visible');
+  document.getElementById('outputTextBox').classList.remove('visible');
+  document.getElementById('errorMsg').classList.remove('visible');
+  document.getElementById('detailContent').style.display = 'none';
+  document.getElementById('emptyState').style.display = 'block';
+  document.getElementById('stepNav').classList.remove('visible');
+  document.getElementById('detailPanel').classList.remove('visible');
+}
+
+function resetAll() {
+  document.getElementById('inputText').value = '';
+  document.getElementById('keyInput').value = '';
+  document.getElementById('inputCount').textContent = '0';
+  document.getElementById('keyCount').textContent = '0';
+  resetOutput();
+  currentResult = null;
+}
+
+// ===== PROCESS =====
+async function processAES() {
+  const inp = document.getElementById('inputText').value.trim();
+  const key = document.getElementById('keyInput').value.trim();
+  const errorEl = document.getElementById('errorMsg');
+  const loadingEl = document.getElementById('loading');
+
+  errorEl.classList.remove('visible');
+
+  if (!inp) { showError('Input tidak boleh kosong'); return; }
+  if (!key) { showError('Kunci tidak boleh kosong'); return; }
+
+  loadingEl.classList.add('visible');
+  document.getElementById('processBtn').disabled = true;
+
+  try {
+    const resp = await fetch('/api/process', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode: currentMode, plaintext: inp, key })
+    });
+    const data = await resp.json();
+
+    if (!resp.ok) {
+      showError(data.error || 'Terjadi kesalahan');
+    } else {
+      currentResult = data;
+      renderOutput(data);
+    }
+  } catch(e) {
+    showError('Koneksi gagal: ' + e.message);
+  } finally {
+    loadingEl.classList.remove('visible');
+    document.getElementById('processBtn').disabled = false;
+  }
+}
+
+function showError(msg) {
+  const el = document.getElementById('errorMsg');
+  el.textContent = '⚠ ' + msg;
+  el.classList.add('visible');
+}
+
+function renderOutput(data) {
+  // Show output
+  const outBox = document.getElementById('outputBox');
+  const outHex = document.getElementById('outputHex');
+  const outLabel = document.getElementById('outputLabel');
+
+  if (data.mode === 'encrypt') {
+    outLabel.textContent = 'Ciphertext (HEX)';
+    outHex.textContent = data.output_hex;
+    outHex.style.color = 'var(--green)';
+    document.getElementById('outputTextBox').classList.remove('visible');
+  } else {
+    outLabel.textContent = 'Plaintext (HEX)';
+    outHex.textContent = data.output_hex;
+    outHex.style.color = 'var(--cyan)';
+    // Also show text
+    const textBox = document.getElementById('outputTextBox');
+    document.getElementById('outputText').textContent = data.output_text || data.output_hex;
+    textBox.classList.add('visible');
+  }
+  outBox.classList.add('visible');
+
+  // Detail
+  if (showDetailFlag) {
+    renderDetail(data);
+  }
+  document.getElementById('detailPanel').classList.add('visible');
+}
+
+// ===== DETAIL RENDERING =====
+function renderDetail(data) {
+  document.getElementById('emptyState').style.display = 'none';
+  const dc = document.getElementById('detailContent');
+  dc.style.display = 'block';
+  dc.innerHTML = '';
+
+  const steps = data.steps;
+  const isEncrypt = data.mode === 'encrypt';
+
+  // Summary
+  const summaryHtml = `
+    <div style="padding:20px;border-bottom:1px solid var(--border)">
+      <div class="summary-bar">
+        <div class="stat-box">
+          <div class="stat-val">${isEncrypt ? '128' : '128'}</div>
+          <div class="stat-label">Bit Block</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-val">10</div>
+          <div class="stat-label">Ronde</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-val">44</div>
+          <div class="stat-label">Sub-kunci</div>
+        </div>
+      </div>
+      <div style="font-size:0.72rem;font-family:var(--mono);color:var(--text3)">
+        Input: <span style="color:var(--text)">${data.input_hex}</span> →
+        Output: <span style="color:var(--green)">${data.output_hex}</span>
+      </div>
+    </div>`;
+  dc.innerHTML += summaryHtml;
+
+  // Build nav
+  const navPills = document.getElementById('navPills');
+  navPills.innerHTML = '';
+  document.getElementById('stepNav').classList.add('visible');
+
+  function addNavPill(id, label, type='') {
+    const p = document.createElement('div');
+    p.className = 'nav-pill' + (type === 'key' ? ' key-pill' : '');
+    p.textContent = label;
+    p.dataset.target = id;
+    p.onclick = () => {
+      document.querySelectorAll('.nav-pill').forEach(x => x.classList.remove('active'));
+      p.classList.add('active');
+      const el = document.getElementById(id);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+    navPills.appendChild(p);
+    return p;
+  }
+
+  addNavPill('section-keyexp', 'Key Expansion', 'key');
+
+  // KEY EXPANSION
+  const keySection = document.createElement('div');
+  keySection.id = 'section-keyexp';
+  keySection.innerHTML = renderKeyExpansion(steps);
+  dc.appendChild(keySection);
+
+  // ROUND OPERATIONS
+  const roundStepsKey = isEncrypt ? 'encryption' : 'decryption';
+  const roundSteps = steps[roundStepsKey];
+
+  roundSteps.forEach((round, idx) => {
+    const sectionId = `section-round-${round.round}`;
+    addNavPill(sectionId, round.label.replace('Round ','R'));
+
+    const sec = document.createElement('div');
+    sec.id = sectionId;
+    sec.className = 'round-section';
+
+    const typeClass = round.type === 'initial' ? 'round-num-init' :
+                      round.type === 'final' ? 'round-num-final' : 'round-num-main';
+
+    const opSummary = round.operations.map(o => o.op.replace(/_/g,' ')).join(' → ');
+
+    sec.innerHTML = `
+      <div class="round-header ${idx < 2 ? 'open' : ''}" onclick="toggleRound(this)">
+        <div class="round-header-left">
+          <div class="round-number ${typeClass}">${round.round === 'init' ? '★' : round.round}</div>
+          <div>
+            <div class="round-label">${round.label}</div>
+            <div class="round-ops-summary">${opSummary}</div>
+          </div>
+        </div>
+        <span class="round-chevron">▼</span>
+      </div>
+      <div class="round-content ${idx < 2 ? 'open' : ''}">
+        ${renderRoundOps(round.operations)}
+      </div>`;
+    dc.appendChild(sec);
+  });
+}
+
+function toggleRound(header) {
+  header.classList.toggle('open');
+  header.nextElementSibling.classList.toggle('open');
+}
+
+function renderKeyExpansion(steps) {
+  const keySteps = steps.key_expansion;
+  const roundKeys = steps.round_keys;
+
+  let html = `<div class="section-divider"><div class="divider-dot"></div><span class="divider-label">Key Expansion — W[0..43] & RK0-RK10</span></div>`;
+  html += `<div class="key-exp-section">`;
+
+  // Initial key state
+  const initStep = keySteps.find(s => s.type === 'key_init');
+  if (initStep) {
+    html += `<div class="operation-block">
+      <div class="op-label-bar"><div class="op-dot" style="background:var(--yellow)"></div><span class="op-name" style="color:var(--yellow)">State Awal Kunci</span></div>
+      <div class="state-block"><div class="state-tag">Initial Key (4×4)</div>${renderMatrix(initStep.state, 'key')}</div>
+    </div>`;
+  }
+
+  // Word generation table
+  html += `<div class="operation-block">
+    <div class="op-label-bar"><div class="op-dot" style="background:var(--pink)"></div><span class="op-name" style="color:var(--pink)">Word Generation W[0..43]</span></div>
+    <div style="overflow-x:auto">
+    <table class="word-table">
+      <thead><tr><th>Word</th><th>Nilai</th><th>Keterangan</th></tr></thead>
+      <tbody>`;
+
+  keySteps.filter(s => s.type !== 'key_init' && s.type !== 'round_key').forEach(s => {
+    const wordHex = (s.word || s.result || []).map(b => `<span class="word-hex">${b}</span>`).join(' ');
+    let detail = '';
+    if (s.type === 'word_g') {
+      detail = `<div class="g-func-detail">
+        <div class="g-step"><span class="g-step-label">RotWord:</span><span class="g-step-val">${s.g_steps.rot_word.join(' ')}</span></div>
+        <div class="g-step"><span class="g-step-label">SubWord:</span><span class="g-step-val">${s.g_steps.sub_word.join(' ')}</span></div>
+        <div class="g-step"><span class="g-step-label">Rcon:</span><span class="g-step-rcon">${s.g_steps.rcon}</span></div>
+        <div class="g-step"><span class="g-step-label">XOR Rcon:</span><span class="g-step-val">${s.g_steps.after_xor_rcon.join(' ')}</span></div>
+        <div class="g-step"><span class="g-step-label">⊕ W[prev4]:</span><span style="color:var(--text3)">${s.w_prev4.join(' ')}</span></div>
+      </div>`;
+    } else if (s.type === 'word_xor') {
+      detail = `<span class="word-note">${s.w_prev1.join(' ')} ⊕ ${s.w_prev4.join(' ')}</span>`;
+    }
+    const labelColor = s.type === 'word_g' ? 'var(--pink)' : 'var(--text2)';
+    html += `<tr>
+      <td style="color:${labelColor};font-weight:600">${s.label}</td>
+      <td>${wordHex}</td>
+      <td><div class="word-note">${s.note || ''}</div>${detail}</td>
+    </tr>`;
+  });
+
+  html += `</tbody></table></div></div>`;
+
+  // Round Keys
+  html += `<div class="operation-block">
+    <div class="op-label-bar"><div class="op-dot" style="background:var(--yellow)"></div><span class="op-name" style="color:var(--yellow)">Round Keys (RK0 – RK10)</span></div>
+    <div class="rk-grid">`;
+
+  roundKeys.forEach((rk, i) => {
+    html += `<div class="rk-item">
+      <div class="rk-item-label">RK${i}</div>
+      ${renderMatrix(rk, 'key')}
+    </div>`;
+  });
+
+  html += `</div></div></div>`;
+  return html;
+}
+
+function renderRoundOps(ops) {
+  let html = '';
+  ops.forEach(op => {
+    const opInfo = getOpInfo(op.op);
+    html += `<div class="operation-block">
+      <div class="op-label-bar">
+        <div class="op-dot" style="background:${opInfo.color}"></div>
+        <span class="op-name" style="color:${opInfo.color}">${op.label}</span>
+      </div>
+      <div class="states-display">`;
+
+    if (op.op === 'plaintext_state' || op.op === 'ciphertext_state') {
+      html += `<div class="state-block"><div class="state-tag">State</div>${renderMatrix(op.after, opInfo.cellClass)}</div>`;
+    } else {
+      if (op.before) {
+        html += `<div class="state-block"><div class="state-tag">Sebelum</div>${renderMatrix(op.before, 'plain')}</div>`;
+        html += `<div class="arrow-sep">→</div>`;
+      }
+      if (op.rk) {
+        html += `<div class="state-block"><div class="state-tag">Round Key</div>${renderMatrix(op.rk, 'key')}</div>`;
+        html += `<div class="arrow-sep">⊕</div>`;
+        html += `<div class="arrow-sep">→</div>`;
+      }
+      html += `<div class="state-block"><div class="state-tag">Sesudah</div>${renderMatrix(op.after, opInfo.cellClass, op.before)}</div>`;
+    }
+
+    html += `</div></div>`;
+  });
+  return html;
+}
+
+function getOpInfo(op) {
+  const map = {
+    'sub_bytes':     { color: 'var(--op-sub)',   cellClass: 'sub' },
+    'inv_sub_bytes': { color: 'var(--op-sub)',   cellClass: 'sub' },
+    'shift_rows':    { color: 'var(--op-shift)', cellClass: 'shift' },
+    'inv_shift_rows':{ color: 'var(--op-shift)', cellClass: 'shift' },
+    'mix_columns':   { color: 'var(--op-mix)',   cellClass: 'mix' },
+    'inv_mix_columns':{ color: 'var(--op-mix)',  cellClass: 'mix' },
+    'add_round_key': { color: 'var(--op-ark)',   cellClass: 'ark' },
+    'plaintext_state':{ color: 'var(--green)',   cellClass: 'init' },
+    'ciphertext_state':{ color: 'var(--orange)', cellClass: 'mix' },
+  };
+  return map[op] || { color: 'var(--text2)', cellClass: 'plain' };
+}
+
+function renderMatrix(state, cellClass, prevState = null) {
+  let html = '<table class="state-matrix"><tbody>';
+  for (let r = 0; r < 4; r++) {
+    html += '<tr>';
+    for (let c = 0; c < 4; c++) {
+      const val = state[r][c];
+      let changed = '';
+      if (prevState && prevState[r][c] !== val) changed = ' cell-new';
+      html += `<td class="cell-${cellClass}${changed}">${val}</td>`;
+    }
+    html += '</tr>';
+  }
+  html += '</tbody></table>';
+  return html;
+}
+
+// ===== COPY =====
+function copyOutput() {
+  const text = document.getElementById('outputHex').textContent;
+  navigator.clipboard.writeText(text).then(() => showToast());
+  const btn = document.getElementById('copyBtn');
+  btn.textContent = '✓';
+  btn.classList.add('copied');
+  setTimeout(() => { btn.textContent = 'copy'; btn.classList.remove('copied'); }, 1500);
+}
+
+function copyText() {
+  const text = document.getElementById('outputText').textContent;
+  navigator.clipboard.writeText(text).then(() => showToast());
+}
+
+function showToast() {
+  const t = document.getElementById('toast');
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+// Auto-fill example on load
+window.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('keyInput').value = '2b7e151628aed2a6abf7158809cf4f3c';
+  document.getElementById('keyCount').textContent = '32';
+});
+</script>
+</body>
+</html>
